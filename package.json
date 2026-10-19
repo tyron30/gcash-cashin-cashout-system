@@ -1,0 +1,34 @@
+{
+  "name": "gcash-monitor",
+  "private": true,
+  "version": "0.6.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --import ./tests/register.mjs --test \"tests/unit/*.test.js\"",
+    "check:security": "node scripts/security-check.mjs",
+    "check:contrast": "node scripts/contrast-check.mjs",
+    "test:api": "node --env-file=.env scripts/api-security-test.mjs",
+    "preflight": "node scripts/preflight.mjs",
+    "verify:deploy": "node scripts/verify-deployment.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "lucide-react": "latest",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.0",
+    "recharts": "^3.0.0",
+    "tailwindcss": "^4.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

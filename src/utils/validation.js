@@ -9,6 +9,10 @@ export const MAX_CLOSING_NOTES_LENGTH = 500
 // Letters (any language), asterisks, spaces, and a few name punctuation marks.
 const NAME_PATTERN = /^[\p{L}\p{M}*.,'’\- ]+$/u
 
+// Only a CASH-OUT has a reference number (the staff copy it from the receipt the customer sent).
+// A cash-in has none: the customer gives their number and the staff just photograph the receipt.
+export const needsReference = (type) => type === 'cash_out'
+
 // Trim and collapse repeated spaces.
 export function cleanText(value) {
   return String(value ?? '').trim().replace(/\s+/g, ' ')

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   cleanText,
+  needsReference,
   normalizeReference,
   parseMoney,
   referenceKey,
@@ -41,6 +42,14 @@ describe('reference numbers', () => {
     for (const bad of ['=1+1+1+1+1', '@SUM(A1:A9)', '<script>alert(1)</script>', "1234'; DROP TABLE"]) {
       assert.notEqual(validateReference(bad), '', bad)
     }
+  })
+})
+
+describe('which transactions need a reference number', () => {
+  it('only a cash-out needs one (the staff copy it from the receipt the customer sent)', () => {
+    assert.equal(needsReference('cash_out'), true)
+    assert.equal(needsReference('cash_in'), false)
+    assert.equal(needsReference(undefined), false)
   })
 })
 

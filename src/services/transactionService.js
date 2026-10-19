@@ -153,7 +153,7 @@ export async function createTransaction(input, viewer) {
   const { data } = await call(
     supabase.rpc('create_transaction', {
       p_transaction_type: input.type,
-      p_reference_number: input.referenceNumber,
+      p_reference_number: input.type === 'cash_out' ? input.referenceNumber : null,
       p_amount: input.amount,
       p_sender_receiver_name: cleanText(input.name) || null,
       p_notes: cleanText(input.notes) || null,
@@ -168,7 +168,7 @@ export async function updateTransaction(id, changes, reason, viewer) {
   const { data } = await call(
     supabase.rpc('update_transaction', {
       p_id: id,
-      p_reference_number: changes.referenceNumber,
+      p_reference_number: changes.referenceNumber ?? null,
       p_amount: changes.amount,
       p_sender_receiver_name: cleanText(changes.name) || null,
       p_notes: cleanText(changes.notes) || null,

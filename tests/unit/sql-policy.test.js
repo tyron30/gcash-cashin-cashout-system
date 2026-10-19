@@ -12,7 +12,7 @@ const code = sql.replace(/--[^\n]*/g, '') // ignore comments
 // Functions that must NOT be callable by the app (internal helpers and triggers).
 const INTERNAL = new Set([
   'assert_admin', 'store_timezone', 'normalize_reference', 'write_audit_log', 'validate_transaction_fields',
-  'set_updated_at', 'prevent_modification', 'handle_new_user', 'guard_profile_changes', 'set_business_date',
+  'validate_transaction_input', 'set_updated_at', 'prevent_modification', 'handle_new_user', 'guard_profile_changes', 'set_business_date',
   'protect_transaction_fields', 'enforce_open_business_day',
 ])
 
@@ -97,6 +97,28 @@ describe('database security rules (static check of the SQL files)', () => {
     assert.match(code, /create trigger transactions_10_set_business_date/)
     assert.match(code, /create trigger transactions_20_protect_fields/)
     assert.match(code, /create trigger transactions_30_enforce_open_day/)
+  })
+
+  it('functions added after the main permission lockdown are explicitly revoked from everyone', () => {
+    // Postgres lets everyone run a NEW function by default. Migration 5 fixed the old ones;
+    // anything created later must carry its own "revoke execute".
+    const early = new Set()
+    const late = new Set()
+    for (const file of files) {
+      const body = readFileSync(new URL(file, dir), 'utf8').replace(/--[^\n]*/g, '')
+      const names = [...body.matchAll(/create or replace function public\.(\w+)/g)].map((m) => m[1])
+      names.forEach((n) => (file < '20261014000600' ? early.add(n) : late.add(n)))
+    }
+    for (const name of late) {
+      if (early.has(name)) continue // re-created: it keeps its permissions
+      assert.match(code, new RegExp(`revoke execute on function public\\.${name}\\(`), `${name} is not revoked`)
+    }
+  })
+
+  it('the reference number rule: required for cash-out only, enforced by the database', () => {
+    assert.match(code, /alter column reference_number drop not null/)
+    assert.match(code, /transaction_type <> 'cash_out' or reference_number is not null/)
+    assert.match(code, /drop function if exists public\.validate_transaction_fields/)
   })
 
   it('amounts are constrained in the database itself', () => {

@@ -12,6 +12,7 @@ import { formatPeso } from '../../utils/currency'
 import { createUuid } from '../../utils/uuid'
 import { formatDateTime, getManilaNowParts, toManilaTimestamp } from '../../utils/date'
 import {
+  needsReference,
   normalizeReference,
   parseMoney,
   validateAmount,
@@ -53,6 +54,7 @@ export default function TransactionForm({ type }) {
   const online = useOnlineStatus()
 
   const referenceRef = useRef(null)
+  const amountRef = useRef(null)
   const submittingRef = useRef(false) // blocks double taps instantly
   const submissionKeyRef = useRef(createSubmissionKey()) // blocks duplicate records
 
@@ -67,10 +69,12 @@ export default function TransactionForm({ type }) {
   const [timeValue, setTimeValue] = useState('')
 
   const id = (name) => `${type}-${name}`
+  const withReference = needsReference(type) // cash-out only
 
   // Ready to type as soon as the page opens.
   useEffect(() => {
-    referenceRef.current?.focus()
+    ;(withReference ? referenceRef : amountRef).current?.focus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function setField(name, value) {
@@ -92,7 +96,7 @@ export default function TransactionForm({ type }) {
 
   function validateAll() {
     const next = {}
-    const reference = validateReference(values.reference)
+    const reference = withReference ? validateReference(values.reference) : ''
     const amount = validateAmount(values.amount)
     const name = validateName(values.name)
     const notes = validateNotes(values.notes)
@@ -113,7 +117,7 @@ export default function TransactionForm({ type }) {
     setDuplicates(null)
     setAdjustTime(false)
     submissionKeyRef.current = createSubmissionKey() // next record = new key
-    referenceRef.current?.focus()
+    ;(withReference ? referenceRef : amountRef).current?.focus()
   }
 
   async function saveTransaction({ skipDuplicateCheck = false } = {}) {
@@ -123,7 +127,7 @@ export default function TransactionForm({ type }) {
     setSubmitError('')
 
     try {
-      if (!skipDuplicateCheck) {
+      if (withReference && !skipDuplicateCheck) {
         const matches = await findDuplicateReference(values.reference)
         if (matches.length > 0) {
           setDuplicates(matches)
@@ -134,7 +138,7 @@ export default function TransactionForm({ type }) {
       const { transaction } = await createTransaction(
         {
           type,
-          referenceNumber: values.reference,
+          referenceNumber: withReference ? values.reference : null,
           amount: parseMoney(values.amount),
           name: values.name,
           notes: values.notes,
@@ -189,7 +193,7 @@ export default function TransactionForm({ type }) {
           <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <p className="min-w-0">
             <span className="font-semibold">Saved:</span> {formatPeso(lastSaved.amount)} ·{' '}
-            {lastSaved.referenceNumber}.{' '}
+            {lastSaved.referenceNumber ? `· ${lastSaved.referenceNumber}` : ''}.{' '}
             <Link to={`/transactions/${lastSaved.id}`} className="font-semibold underline">
               View
             </Link>
@@ -218,6 +222,8 @@ export default function TransactionForm({ type }) {
           </div>
         </div>
 
+        {withReference ? (
+          <>
         <FormField
           id={id('reference')}
           label="Reference number"
@@ -291,6 +297,12 @@ export default function TransactionForm({ type }) {
             </div>
           </div>
         )}
+          </>
+        ) : (
+          <p className="rounded-xl bg-slate-100 px-3 py-2.5 text-sm text-slate-700">
+            No reference number is needed for a cash-in. Enter the amount below.
+          </p>
+        )}
 
         <FormField id={id('amount')} label="Amount" error={errors.amount}>
           <div className="relative">
@@ -302,6 +314,7 @@ export default function TransactionForm({ type }) {
             </span>
             <input
               {...fieldProps(id('amount'), errors.amount)}
+              ref={amountRef}
               type="text"
               inputMode="decimal"
               autoComplete="off"

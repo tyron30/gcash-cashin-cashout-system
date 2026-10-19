@@ -106,6 +106,8 @@ declare
   v_req    uuid := gen_random_uuid();
   v_req2   uuid := gen_random_uuid();
   v_req3   uuid := gen_random_uuid();
+  v_req4   uuid := gen_random_uuid();
+  v_req5   uuid := gen_random_uuid();
   v_tx     public.transactions;
   v_tx2    public.transactions;
   v_old    public.transactions;
@@ -127,15 +129,15 @@ begin
   update public.profiles set role = 'staff', is_active = true where id = v_staff;
 
   -- ---------------- STAFF: allowed things ----------------
-  v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_in', '0143872590316', '1500.50', 'JU**** DE**', v_req));
+  v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_out', '0143872590316', '1500.50', 'JU**** DE**', v_req));
   select * into v_tx from public.transactions where client_request_id = v_req;
   v_report := v_report || pg_temp.line(
     v_err is null and v_tx.reference_number = '0143 872 590316' and v_tx.amount = 1500.50
       and v_tx.business_date = v_today and v_tx.created_by = v_staff and v_tx.status = 'completed',
-    '1. Staff can record a cash-in (leading zero kept, business date = today in Manila)',
+    '1. Staff can record a cash-out (reference leading zero kept, business date = today in Manila)',
     coalesce(v_err, format('reference=%s amount=%s date=%s', v_tx.reference_number, v_tx.amount, v_tx.business_date)));
 
-  v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_in', '0143872590316', '1500.50', 'JU**** DE**', v_req));
+  v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_out', '0143872590316', '1500.50', 'JU**** DE**', v_req));
   select count(*) into v_n from public.transactions where client_request_id = v_req;
   v_report := v_report || pg_temp.line(v_err is null and v_n = 1,
     '2. Saving the same form twice creates only ONE record', coalesce(v_err, format('%s record(s)', v_n)));
@@ -150,8 +152,8 @@ begin
       coalesce(v_err, 'it was ACCEPTED'));
   end loop;
 
-  v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_in', '123', '100', null, null));
-  v_report := v_report || pg_temp.line(v_err is not null, '5. A too-short reference number is rejected', coalesce(v_err, 'it was ACCEPTED'));
+  v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_out', '123', '100', null, null));
+  v_report := v_report || pg_temp.line(v_err is not null, '5. A cash-out with a too-short reference number is rejected', coalesce(v_err, 'it was ACCEPTED'));
 
   v_err := pg_temp.try_as(v_staff, format(v_create, 'transfer', '5555666677778', '100', null, null));
   v_report := v_report || pg_temp.line(v_err is not null, '6. An invalid transaction type is rejected', coalesce(v_err, 'it was ACCEPTED'));
@@ -336,6 +338,29 @@ begin
 
   v_n := pg_temp.count_as(null, format('select * from public.search_transactions(%L, %L)', v_today, v_today));
   v_report := v_report || pg_temp.line(v_n = -1, '50. A logged-out visitor cannot use search', format('result: %s (-1 = blocked)', v_n));
+
+  -- ---------------- REFERENCE NUMBER RULE (needs migration 7) ----------------
+  v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_in', null, '250', null, v_req4));
+  select * into v_x from public.transactions where client_request_id = v_req4;
+  v_report := v_report || pg_temp.line(v_err is null and v_x.reference_number is null and v_x.amount = 250,
+    '51. A cash-in needs NO reference number (stored blank)', coalesce(v_err, format('saved, reference = %s', coalesce(v_x.reference_number, '(blank)'))));
+
+  v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_out', null, '250', null, gen_random_uuid()));
+  v_report := v_report || pg_temp.line(v_err is not null, '52. A cash-out WITHOUT a reference number is rejected', coalesce(v_err, 'it was ACCEPTED'));
+
+  v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_in', '5555666677778', '250', null, v_req5));
+  select * into v_x from public.transactions where client_request_id = v_req5;
+  v_report := v_report || pg_temp.line(v_err is null and v_x.reference_number is null,
+    '53. A cash-in ignores any reference it is sent (kept blank)', coalesce(v_err, format('reference = %s', coalesce(v_x.reference_number, '(blank)'))));
+
+  begin
+    insert into public.transactions (reference_number, transaction_type, amount, transaction_timestamp, created_by)
+    values (null, 'cash_out', 10, now(), v_admin);
+    v_err := null;
+  exception when others then
+    v_err := sqlerrm;
+  end;
+  v_report := v_report || pg_temp.line(v_err is not null, '54. The table itself refuses a cash-out with no reference (even for the database admin role)', coalesce(v_err, 'it was ALLOWED'));
 
   -- ---------------- REPORT ----------------
   v_fails := (length(v_report) - length(replace(v_report, '*** FAIL', ''))) / length('*** FAIL');

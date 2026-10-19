@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Info, UserCheck } from 'lucide-react'
+import { UserCheck } from 'lucide-react'
 import Button from '../components/common/Button'
 import PageHeader from '../components/common/PageHeader'
 import ErrorState from '../components/common/ErrorState'
@@ -30,21 +30,6 @@ export default function StaffPage() {
   return (
     <div className="space-y-5">
       <PageHeader title="Staff" description="Control who can log in and what they can do." />
-
-      <div className="flex items-start gap-2 rounded-xl bg-slate-100 px-3 py-3 text-sm text-slate-700">
-        <Info className="mt-0.5 size-4 shrink-0 text-slate-500" aria-hidden="true" />
-        <div>
-          <p className="font-semibold">Adding a new person</p>
-          <ol className="mt-1 list-decimal space-y-0.5 pl-5">
-            <li>
-              In Supabase: Authentication → Users → Add user (email + password, tick <b>Auto Confirm User</b>).
-            </li>
-            <li>Come back here and refresh. They appear as &quot;Waiting for activation&quot;.</li>
-            <li>Tap them and switch on &quot;Account is active&quot;.</li>
-          </ol>
-          <p className="mt-1">Never delete someone who has records. Deactivate them instead.</p>
-        </div>
-      </div>
 
       {waiting > 0 && (
         <p role="status" className="flex items-center gap-2 rounded-xl bg-amber-100 px-3 py-2.5 text-sm font-semibold text-amber-900">

@@ -58,7 +58,7 @@ export default function VoidTransactionModal({ transaction, onClose, onDone }) {
         <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <p>
-            {formatPeso(transaction.amount)} ({transaction.referenceNumber}) will be marked as voided and removed from
+            {formatPeso(transaction.amount)}{transaction.referenceNumber ? ` (${transaction.referenceNumber})` : ''} will be marked as voided and removed from
             all totals. The record stays in the history and cannot be un-voided.
           </p>
         </div>

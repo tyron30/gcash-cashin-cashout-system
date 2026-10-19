@@ -6,12 +6,12 @@ This is the quality gate before deployment. Work top to bottom.
 
 | Command | What it proves | Needs |
 |---|---|---|
-| `npm test` | 85 automated checks of money math, validation, CSV safety, Manila dates, error handling, and the SQL security rules | nothing |
+| `npm test` | 100 automated checks of money math, validation, CSV safety, Manila dates, error handling, and the SQL security rules | nothing |
 | `npm run check:contrast` | Text colours meet WCAG AA contrast | nothing |
 | `npm run build` | The whole app compiles for production | npm install |
 | `npm run check:security` | No secrets or risky code in the project or in the built website | run `build` first |
 | `npm run test:api` | The REAL Supabase API refuses everything it should (see section 3) | test logins |
-| `supabase/tests/rls_tests.sql` | 50 database security checks, saves nothing | SQL Editor |
+| `supabase/tests/rls_tests.sql` | 54 database security checks, saves nothing | SQL Editor |
 | `supabase/tests/anon_access_test.ps1` | A logged-out visitor gets nothing | `.env` |
 
 Run `npm test`, `npm run build`, and `npm run check:security` after **every** future change.
@@ -77,11 +77,12 @@ Passwords stay only in this PowerShell window and are cleared at the end. Every 
 - [ ] An account the owner has not activated sees "Waiting for activation"
 
 ### 4.3 Recording
-- [ ] Reference `0143872590316` is shown as `0143 872 590316`
+- [ ] **Cash Out**: reference `0143872590316` is shown as `0143 872 590316`, and Save is refused without a reference
+- [ ] **Cash In**: there is no reference field. Only the amount (and optional name/notes) is needed
 - [ ] Amounts `0`, `-5`, `10.123`, `abc` show a clear message and do not save
 - [ ] Save with a masked name `JU**** DE**`, then one with no name
 - [ ] Double-tap Save quickly: exactly ONE record appears
-- [ ] Same reference twice: the warning appears; "Save anyway" works
+- [ ] **Cash Out** with the same reference twice: the warning appears; "Save anyway" works
 - [ ] Turn off Wi-Fi: the Save button pauses with a warning; turn it on and it works again
 - [ ] Dashboard total changes by exactly the amount saved
 

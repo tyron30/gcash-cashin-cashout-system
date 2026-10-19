@@ -72,6 +72,12 @@ describe('CSV format for Excel', () => {
     const csv = build([make({ referenceNumber: '0143872590316' })])
     assert.ok(csv.includes('"=""0143872590316"""'))
   })
+  it('a cash-in has no reference: the cell is simply empty', () => {
+    const csv = build([make({ type: 'cash_in', referenceNumber: null })])
+    assert.ok(csv.includes('2026-10-13,'))
+    assert.ok(/,,Cash In,1500\.50,/.test(csv), 'empty reference column before the type')
+    assert.ok(!csv.includes('null') && !csv.includes('undefined'))
+  })
   it('spaced references are already text and are not wrapped', () => {
     const csv = build([make({ referenceNumber: '0143 872 590316' })])
     assert.ok(csv.includes('0143 872 590316'))

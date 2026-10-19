@@ -28,6 +28,11 @@ describe('mapTransaction', () => {
     assert.equal(t.name, null)
     assert.equal(t.staffName, 'Ana')
   })
+  it('a cash-in has no reference number (null, never the text "null")', () => {
+    const t = mapTransaction({ ...row, transaction_type: 'cash_in', reference_number: null })
+    assert.equal(t.referenceNumber, null)
+    assert.equal(mapTransaction({ ...row, reference_number: undefined }).referenceNumber, null)
+  })
   it('finds the staff name from an embedded profile, or an override, or falls back', () => {
     assert.equal(mapTransaction({ ...row, staff: { full_name: 'Ben' } }).staffName, 'Ben')
     assert.equal(mapTransaction(row, 'Override').staffName, 'Override')

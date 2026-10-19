@@ -6,7 +6,7 @@ import { formatDateTime } from '../utils/date'
 export function mapTransaction(row, staffNameOverride) {
   return {
     id: row.id,
-    referenceNumber: row.reference_number,
+    referenceNumber: row.reference_number ?? null,
     type: row.transaction_type,
     amount: Number(row.amount),
     name: row.sender_receiver_name ?? null,

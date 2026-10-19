@@ -8,6 +8,7 @@ import { useToast } from '../../hooks/useToast'
 import { updateTransaction } from '../../services/transactionService'
 import { getManilaNowParts, getTimestampParts, toManilaTimestamp } from '../../utils/date'
 import {
+  needsReference,
   normalizeReference,
   parseMoney,
   validateAmount,
@@ -22,9 +23,10 @@ export default function EditTransactionModal({ transaction, onClose, onDone }) {
   const { profile } = useAuth()
   const toast = useToast()
   const initial = getTimestampParts(transaction.transactionTimestamp)
+  const withReference = needsReference(transaction.type)
 
   const [values, setValues] = useState({
-    reference: transaction.referenceNumber,
+    reference: transaction.referenceNumber ?? '',
     amount: String(transaction.amount),
     name: transaction.name ?? '',
     notes: transaction.notes ?? '',
@@ -47,7 +49,7 @@ export default function EditTransactionModal({ transaction, onClose, onDone }) {
 
     const next = {}
     const checks = {
-      reference: validateReference(values.reference),
+      reference: withReference ? validateReference(values.reference) : '',
       amount: validateAmount(values.amount),
       name: validateName(values.name),
       notes: validateNotes(values.notes),
@@ -66,7 +68,7 @@ export default function EditTransactionModal({ transaction, onClose, onDone }) {
       await updateTransaction(
         transaction.id,
         {
-          referenceNumber: values.reference,
+          referenceNumber: withReference ? values.reference : null,
           amount: parseMoney(values.amount),
           name: values.name,
           notes: values.notes,
@@ -109,6 +111,7 @@ export default function EditTransactionModal({ transaction, onClose, onDone }) {
           To change Cash In / Cash Out, void this record and enter a new one.
         </p>
 
+        {withReference && (
         <FormField id="edit-reference" label="Reference number" error={errors.reference}>
           <input
             {...fieldProps('edit-reference', errors.reference)}
@@ -121,6 +124,7 @@ export default function EditTransactionModal({ transaction, onClose, onDone }) {
             className={`${inputClass(Boolean(errors.reference))} font-mono`}
           />
         </FormField>
+        )}
 
         <FormField id="edit-amount" label="Amount (₱)" error={errors.amount}>
           <input

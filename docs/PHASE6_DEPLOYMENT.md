@@ -31,7 +31,7 @@ npm install
 npm run preflight
 ```
 
-It runs the 95 tests, the contrast check, the production build, and the security scan, then prints
+It runs the 100 tests, the contrast check, the production build, and the security scan, then prints
 **GO** or **NO-GO**. Do not continue on NO-GO. Send me the red text instead.
 
 (This is also the first full production build of the project. If it fails, that is exactly why it exists.)
@@ -164,7 +164,7 @@ Do this on your own phone, over mobile data (not Wi-Fi), so you test it like a c
 - [ ] Open the address. The login page appears (padlock in the address bar)
 - [ ] Log in as the **owner**. Open **Staff**, activate a staff member
 - [ ] Log in as **staff** on a second device. They see only Dashboard / Cash In / Cash Out / History
-- [ ] Staff records one real **PHP 1** cash-in. Owner sees it on the dashboard
+- [ ] Staff records one real **PHP 1** cash-in (no reference needed), then one **PHP 1** cash-out with a reference. Owner sees it on the dashboard
 - [ ] Owner **voids** it with the reason "Go-live test". (It stays as a voided row. That is how the system proves the books were never altered.)
 - [ ] Owner downloads a CSV and opens it in Excel
 

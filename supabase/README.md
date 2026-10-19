@@ -12,11 +12,12 @@ Everything here builds the secure database. The React app is **not** connected y
 | `migrations/..0300_rls_policies.sql` | Who can read which rows. Removes default permissions. |
 | `migrations/..0400_rpc_functions.sql` | The approved actions: record, edit, void, totals, closing, staff access. |
 | `migrations/..0500_function_permissions.sql` | Only the approved functions can be called, and only when logged in. |
+| `migrations/..0700_reference_only_for_cash_out.sql` | Reference number is required for cash-out only; cash-in has none. **Run once if you already ran migrations 1-6.** |
 | `migrations/..0600_search_and_staff_functions.sql` | Phase 4: History search, totals for filters, owner-only staff list. **Run once if you already ran migrations 1-5.** |
-| `setup_all.sql` | All six migrations joined into ONE file (for a brand-new project only). |
+| `setup_all.sql` | All seven migrations joined into ONE file (for a brand-new project only). |
 | `bootstrap_owner.sql` | Make the first owner and activate staff. Run by hand. |
 | `seed.sql` | OPTIONAL fake data. Development project only. |
-| `tests/rls_tests.sql` | 50 security checks (the last 5 need migration 6). Saves nothing. |
+| `tests/rls_tests.sql` | 54 security checks (46-50 need migration 6, 51-54 need migration 7). Saves nothing. |
 | `tests/anon_access_test.ps1` | Confirms a logged-out visitor gets nothing. |
 
 ## How the security works (short version)
@@ -101,6 +102,10 @@ Never delete a login that has transactions. Deactivate it instead.
 
 Paste `seed.sql` into the SQL Editor and run it. It only works if an owner exists and there
 are no transactions yet. **Never run it on the project your store really uses.**
+
+## Already ran migrations 1-6? Upgrade to the cash-in/cash-out reference rule
+
+Open `migrations/20261014000700_reference_only_for_cash_out.sql`, paste it into the SQL Editor, and Run. Do **not** re-run `setup_all.sql`. Existing records are kept (old cash-in records that already have a reference keep it).
 
 ## Already ran migrations 1-5? (Phase 4 upgrade)
 

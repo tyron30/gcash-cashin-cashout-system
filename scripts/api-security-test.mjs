@@ -55,7 +55,7 @@ async function login(client, email, password, label) {
 
 const createArgs = (extra = {}) => ({
   p_transaction_type: 'cash_in',
-  p_reference_number: reference(),
+  p_reference_number: null, // a cash-in has no reference number
   p_amount: 1,
   p_sender_receiver_name: null,
   p_notes: 'Automated security test',
@@ -86,10 +86,16 @@ if (first.error) {
 const id1 = first.data.id
 created.push(id1)
 check('staff can record a transaction', Boolean(id1))
+check('a cash-in needs no reference number (stored blank)', first.data.reference_number === null, `got ${first.data.reference_number}`)
 check('business date is today (Manila)', first.data.business_date === today, `got ${first.data.business_date}`)
 
 const again = await staff.rpc('create_transaction', createArgs({ p_client_request_id: key }))
 check('same request id never creates a second record', !again.error && again.data.id === id1)
+
+check('a cash-out WITHOUT a reference is rejected', blocked(await staff.rpc('create_transaction', createArgs({ p_transaction_type: 'cash_out', p_reference_number: null }))))
+const cashOut = await staff.rpc('create_transaction', createArgs({ p_transaction_type: 'cash_out', p_reference_number: reference() }))
+if (cashOut.data?.id) created.push(cashOut.data.id)
+check('a cash-out WITH a reference saves', !cashOut.error && Boolean(cashOut.data?.reference_number), cashOut.error?.message)
 
 for (const amount of [0, -5, 10.123, 1000000]) {
   check(`staff cannot save amount ${amount}`, blocked(await staff.rpc('create_transaction', createArgs({ p_amount: amount }))))
@@ -160,6 +166,11 @@ check('owner cannot demote themselves', blocked(await owner.rpc('admin_update_pr
 check('owner cannot rewrite the audit log', nothing(await owner.from('audit_logs').update({ action: 'hacked' }).eq('entity_id', id1).select()))
 check('owner cannot delete the audit log', nothing(await owner.from('audit_logs').delete().eq('entity_id', id1).select()))
 check('owner cannot write to transactions directly', blocked(await owner.from('transactions').insert({ reference_number: reference(), transaction_type: 'cash_in', amount: 1, created_by: ownerUser.id, business_date: today })))
+
+// Clean up: void any test record that is still active (records are never deleted).
+for (const id of created.filter(Boolean)) {
+  await owner.rpc('void_transaction', { p_id: id, p_reason: 'Automated test cleanup' })
+}
 
 console.log(`\n${passed} passed, ${failed} failed.`)
 console.log('Test records were voided. They remain in History as voided "TEST..." rows (records are never deleted).')

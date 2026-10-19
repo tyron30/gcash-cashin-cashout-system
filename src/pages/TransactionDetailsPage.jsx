@@ -82,7 +82,7 @@ export default function TransactionDetailsPage() {
         <p className={`mt-3 text-3xl font-bold tabular-nums ${isVoided ? 'text-slate-500 line-through' : ''}`}>
           {formatPeso(data.amount)}
         </p>
-        <p className="mt-1 font-mono text-sm text-slate-600">{data.referenceNumber}</p>
+        {data.referenceNumber && <p className="mt-1 font-mono text-sm text-slate-600">{data.referenceNumber}</p>}
       </div>
 
       {isVoided && (

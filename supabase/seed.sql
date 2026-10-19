@@ -44,7 +44,8 @@ begin
         (reference_number, transaction_type, amount, sender_receiver_name,
          transaction_timestamp, status, void_reason, voided_at, voided_by, created_by)
       values (
-        public.normalize_reference((5000000000000 + v_day * 100000000 + v_i * 7919)::text),
+        case when v_i % 2 = 1 then null   -- cash-in: no reference number
+             else public.normalize_reference((5000000000000 + v_day * 100000000 + v_i * 7919)::text) end,
         case when v_i % 2 = 1 then 'cash_in' else 'cash_out' end,
         v_amounts[v_i],
         v_names[v_i],

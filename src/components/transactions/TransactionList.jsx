@@ -32,14 +32,17 @@ function TransactionCard({ transaction, showDate }) {
           <p className="truncate text-sm font-semibold">{transaction.name || <NoName />}</p>
           {showDate ? (
             <>
-              <p className="truncate text-xs text-slate-600">{transaction.referenceNumber}</p>
+              {transaction.referenceNumber && (
+                <p className="truncate text-xs text-slate-600">{transaction.referenceNumber}</p>
+              )}
               <p className="truncate text-xs text-slate-500">
                 {formatDateTime(transaction.transactionTimestamp)} · {transaction.staffName}
               </p>
             </>
           ) : (
             <p className="truncate text-xs text-slate-500">
-              {transaction.referenceNumber} · {formatTime(transaction.transactionTimestamp)}
+              {transaction.referenceNumber ? `${transaction.referenceNumber} · ` : ''}
+              {formatTime(transaction.transactionTimestamp)}
             </p>
           )}
         </div>
@@ -93,7 +96,7 @@ function TransactionTable({ transactions, showDate }) {
                     : formatTime(transaction.transactionTimestamp)}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
-                  {transaction.referenceNumber}
+                  {transaction.referenceNumber ?? <span className="font-sans text-slate-500">None (cash-in)</span>}
                 </td>
                 <td className="px-4 py-3">
                   <TransactionTypeBadge type={transaction.type} />

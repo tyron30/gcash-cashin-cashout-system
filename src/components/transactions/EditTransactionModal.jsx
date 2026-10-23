@@ -4,8 +4,10 @@ import Modal from '../common/Modal'
 import FormField, { fieldProps } from '../forms/FormField'
 import { inputClass } from '../forms/inputStyles'
 import { useAuth } from '../../hooks/useAuth'
+import { useFeeTiers } from '../../hooks/useFeeTiers'
 import { useToast } from '../../hooks/useToast'
 import { updateTransaction } from '../../services/transactionService'
+import { calculateFee } from '../../utils/fees'
 import { getManilaNowParts, getTimestampParts, toManilaTimestamp } from '../../utils/date'
 import {
   needsReference,
@@ -13,6 +15,7 @@ import {
   parseMoney,
   validateAmount,
   validateDateTime,
+  validateFee,
   validateName,
   validateNotes,
   validateReason,
@@ -24,10 +27,12 @@ export default function EditTransactionModal({ transaction, onClose, onDone }) {
   const toast = useToast()
   const initial = getTimestampParts(transaction.transactionTimestamp)
   const withReference = needsReference(transaction.type)
+  const { tiers, ready: feesReady } = useFeeTiers()
 
   const [values, setValues] = useState({
     reference: transaction.referenceNumber ?? '',
     amount: String(transaction.amount),
+    fee: String(transaction.feeAmount ?? 0),
     name: transaction.name ?? '',
     notes: transaction.notes ?? '',
     date: initial.date,
@@ -51,6 +56,7 @@ export default function EditTransactionModal({ transaction, onClose, onDone }) {
     const checks = {
       reference: withReference ? validateReference(values.reference) : '',
       amount: validateAmount(values.amount),
+      fee: validateFee(values.fee),
       name: validateName(values.name),
       notes: validateNotes(values.notes),
       datetime: validateDateTime(values.date, values.time),
@@ -70,6 +76,7 @@ export default function EditTransactionModal({ transaction, onClose, onDone }) {
         {
           referenceNumber: withReference ? values.reference : null,
           amount: parseMoney(values.amount),
+          feeAmount: parseMoney(values.fee),
           name: values.name,
           notes: values.notes,
           // Untouched date/time keeps the ORIGINAL timestamp (with its seconds), so a
@@ -136,6 +143,37 @@ export default function EditTransactionModal({ transaction, onClose, onDone }) {
             onChange={(event) => setField('amount', event.target.value.replace(/[^\d.,]/g, ''))}
             className={`${inputClass(Boolean(errors.amount))} font-semibold tabular-nums`}
           />
+        </FormField>
+
+        <FormField
+          id="edit-fee"
+          label="Fee (₱)"
+          error={errors.fee}
+          hint="Charged on top of the amount. Changing the amount? Tap 'Use fee table' to recalculate."
+        >
+          <div className="flex gap-2">
+            <input
+              {...fieldProps('edit-fee', errors.fee, true)}
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={values.fee}
+              onChange={(event) => setField('fee', event.target.value.replace(/[^\d.,]/g, ''))}
+              className={`${inputClass(Boolean(errors.fee))} font-semibold tabular-nums`}
+            />
+            {feesReady && tiers.length > 0 && (
+              <Button
+                variant="secondary"
+                className="shrink-0"
+                onClick={() => {
+                  const amount = parseMoney(values.amount)
+                  if (!Number.isNaN(amount) && amount > 0) setField('fee', String(calculateFee(tiers, amount).fee))
+                }}
+              >
+                Use fee table
+              </Button>
+            )}
+          </div>
         </FormField>
 
         <FormField id="edit-name" label="Sender / receiver name" optional error={errors.name}>

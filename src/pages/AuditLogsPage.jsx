@@ -9,6 +9,7 @@ import Skeleton from '../components/common/Skeleton'
 import { inputClass } from '../components/forms/inputStyles'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { listAuditLogs } from '../services/auditService'
+import { formatPeso } from '../utils/currency'
 import { formatDateTime } from '../utils/date'
 
 const ACTION_LABELS = {
@@ -20,6 +21,7 @@ const ACTION_LABELS = {
   'closing.reopened': 'Day reopened',
   'profile.updated': 'Staff access changed',
   'settings.updated': 'Store settings changed',
+  'fee_tiers.updated': 'Fee table changed',
 }
 
 const ENTITY_OPTIONS = [
@@ -28,11 +30,22 @@ const ENTITY_OPTIONS = [
   { value: 'daily_closing', label: 'Daily closings' },
   { value: 'profile', label: 'Staff access' },
   { value: 'store_settings', label: 'Store settings' },
+  { value: 'fee_tiers', label: 'Fee table' },
 ]
 
 const label = (key) => key.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
 
 function show(value) {
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '(none)'
+    return value
+      .map((item) =>
+        item && typeof item === 'object' && 'max_amount' in item
+          ? `up to ${formatPeso(item.max_amount)} → fee ${formatPeso(item.fee_amount)}`
+          : JSON.stringify(item),
+      )
+      .join('; ')
+  }
   if (value === null || value === undefined || value === '') return '(blank)'
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) return formatDateTime(value)
   return String(value)

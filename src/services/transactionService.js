@@ -70,6 +70,7 @@ export async function listTransactions(filters, viewer) {
     summary: buildTotals({
       cashInTotal: summary.cash_in_total,
       cashOutTotal: summary.cash_out_total,
+      feeTotal: summary.fee_total,
       cashInCount: summary.cash_in_count,
       cashOutCount: summary.cash_out_count,
       voidedCount: summary.voided_count,
@@ -159,6 +160,7 @@ export async function createTransaction(input, viewer) {
       p_notes: cleanText(input.notes) || null,
       p_transaction_timestamp: input.transactionTimestamp || null,
       p_client_request_id: input.submissionKey || null,
+      p_expected_fee: input.expectedFee ?? null, // the fee the screen showed; the database refuses if it changed
     }),
   )
   return { transaction: mapTransaction(data, viewer?.fullName), alreadySaved: false }
@@ -174,6 +176,7 @@ export async function updateTransaction(id, changes, reason, viewer) {
       p_notes: cleanText(changes.notes) || null,
       p_transaction_timestamp: changes.transactionTimestamp,
       p_reason: reason,
+      p_fee_amount: changes.feeAmount ?? null,
     }),
   )
   return mapTransaction(data, viewer?.fullName)

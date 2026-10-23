@@ -28,6 +28,17 @@ describe('mapTransaction', () => {
     assert.equal(t.name, null)
     assert.equal(t.staffName, 'Ana')
   })
+  it('maps the fee and the total the customer paid (500 + 15 = 515)', () => {
+    const t = mapTransaction({ ...row, amount: '500.00', fee_amount: '15.00', total_amount: '515.00' })
+    assert.equal(t.amount, 500)
+    assert.equal(t.feeAmount, 15)
+    assert.equal(t.totalAmount, 515)
+  })
+  it('older rows with no fee column value count as no fee', () => {
+    const t = mapTransaction({ ...row, amount: '100', fee_amount: undefined })
+    assert.equal(t.feeAmount, 0)
+    assert.equal(t.totalAmount, 100)
+  })
   it('a cash-in has no reference number (null, never the text "null")', () => {
     const t = mapTransaction({ ...row, transaction_type: 'cash_in', reference_number: null })
     assert.equal(t.referenceNumber, null)
@@ -62,6 +73,18 @@ describe('change history', () => {
     assert.equal(entry.changes[0].field, 'Amount')
     assert.match(entry.changes[0].from, /100/)
     assert.match(entry.changes[0].to, /200/)
+  })
+  it('a fee correction is shown in the history', () => {
+    const entry = mapHistoryEntry({
+      id: '6',
+      action: 'transaction.updated',
+      created_at: 't',
+      reason: 'Waived the fee',
+      previous_values: { amount: 500, fee_amount: 15 },
+      new_values: { amount: 500, fee_amount: 0 },
+    })
+    assert.deepEqual(entry.changes.map((c) => c.field), ['Fee'])
+    assert.match(entry.changes[0].from, /15/)
   })
   it('a real time change is detected', () => {
     const entry = mapHistoryEntry({

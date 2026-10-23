@@ -2,6 +2,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   ClipboardCheck,
+  Coins,
   FileText,
   History,
   LayoutDashboard,
@@ -22,6 +23,7 @@ export const primaryNav = [
 export const secondaryNav = [
   { to: '/closing', label: 'Daily Closing', icon: ClipboardCheck, adminOnly: true },
   { to: '/reports', label: 'Reports & Export', icon: FileText, adminOnly: true },
+  { to: '/fees', label: 'Fees & Charges', icon: Coins, adminOnly: true },
   { to: '/staff', label: 'Staff', icon: Users, adminOnly: true },
   { to: '/audit-logs', label: 'Audit Logs', icon: ScrollText, adminOnly: true },
   { to: '/settings', label: 'Store Settings', icon: Settings, adminOnly: true },

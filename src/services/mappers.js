@@ -9,6 +9,8 @@ export function mapTransaction(row, staffNameOverride) {
     referenceNumber: row.reference_number ?? null,
     type: row.transaction_type,
     amount: Number(row.amount),
+    feeAmount: Number(row.fee_amount ?? 0),
+    totalAmount: Math.round((Number(row.amount) + Number(row.fee_amount ?? 0)) * 100) / 100,
     name: row.sender_receiver_name ?? null,
     notes: row.notes ?? null,
     transactionTimestamp: row.transaction_timestamp,
@@ -25,6 +27,7 @@ export function mapTransaction(row, staffNameOverride) {
 const FIELD_LABELS = {
   reference_number: 'Reference number',
   amount: 'Amount',
+  fee_amount: 'Fee',
   sender_receiver_name: 'Sender / receiver',
   notes: 'Notes',
   transaction_timestamp: 'Date and time',
@@ -32,13 +35,16 @@ const FIELD_LABELS = {
 
 function showValue(key, value) {
   if (value === null || value === undefined || value === '') return '(blank)'
-  if (key === 'amount') return formatPeso(value)
+  if (key === 'amount' || key === 'fee_amount') return formatPeso(value)
   if (key === 'transaction_timestamp') return formatDateTime(value)
   return String(value)
 }
 
 function sameInstant(a, b) {
-  return new Date(a).getTime() === new Date(b).getTime()
+  if (a == null && b == null) return true // nothing recorded on either side: not a change
+  const first = new Date(a).getTime()
+  const second = new Date(b).getTime()
+  return Number.isNaN(first) || Number.isNaN(second) ? a === b : first === second
 }
 
 // Audit-log row -> the "change history" entry shown on the details page.

@@ -58,7 +58,10 @@ function TransactionCard({ transaction, showDate }) {
           {isVoided ? (
             <StatusBadge status="voided" />
           ) : (
-            <p className="text-xs text-slate-500">{isCashIn ? 'Cash In' : 'Cash Out'}</p>
+            <p className="text-xs text-slate-500">
+              {isCashIn ? 'Cash In' : 'Cash Out'}
+              {transaction.feeAmount > 0 && ` · +${formatPeso(transaction.feeAmount)} fee`}
+            </p>
           )}
         </div>
         <ChevronRight className="size-4 shrink-0 text-slate-400" aria-hidden="true" />
@@ -79,6 +82,7 @@ function TransactionTable({ transactions, showDate }) {
             <th className="px-4 py-3">Sender / Receiver</th>
             <th className="px-4 py-3">Staff</th>
             <th className="px-4 py-3 text-right">Amount</th>
+            <th className="px-4 py-3 text-right">Fee</th>
             <th className="px-4 py-3">Status</th>
             <th className="px-4 py-3">
               <span className="sr-only">Actions</span>
@@ -109,6 +113,13 @@ function TransactionTable({ transactions, showDate }) {
                   }`}
                 >
                   {formatPeso(transaction.amount)}
+                </td>
+                <td
+                  className={`whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-600 ${
+                    isVoided ? 'line-through' : ''
+                  }`}
+                >
+                  {formatPeso(transaction.feeAmount)}
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={transaction.status} />

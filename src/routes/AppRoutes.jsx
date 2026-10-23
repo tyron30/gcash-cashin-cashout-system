@@ -3,6 +3,7 @@ import AppShell from '../components/layout/AppShell'
 import AuditLogsPage from '../pages/AuditLogsPage'
 import DailyClosingPage from '../pages/DailyClosingPage'
 import DashboardPage from '../pages/DashboardPage'
+import FeesPage from '../pages/FeesPage'
 import LoginPage from '../pages/LoginPage'
 import NotFoundPage from '../pages/NotFoundPage'
 import ReportsPage from '../pages/ReportsPage'
@@ -18,6 +19,7 @@ import ProtectedRoute from './ProtectedRoute'
 const ownerPages = [
   { path: 'closing', element: <DailyClosingPage /> },
   { path: 'reports', element: <ReportsPage /> },
+  { path: 'fees', element: <FeesPage /> },
   { path: 'staff', element: <StaffPage /> },
   { path: 'audit-logs', element: <AuditLogsPage /> },
   { path: 'settings', element: <SettingsPage /> },

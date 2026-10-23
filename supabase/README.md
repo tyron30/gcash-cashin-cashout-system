@@ -12,12 +12,13 @@ Everything here builds the secure database. The React app is **not** connected y
 | `migrations/..0300_rls_policies.sql` | Who can read which rows. Removes default permissions. |
 | `migrations/..0400_rpc_functions.sql` | The approved actions: record, edit, void, totals, closing, staff access. |
 | `migrations/..0500_function_permissions.sql` | Only the approved functions can be called, and only when logged in. |
+| `migrations/..0800_fee_tiers.sql` | Owner-defined fee table (up to X pesos = fee Y). The database adds the fee to every transaction. **Run once if you already ran migrations 1-7.** |
 | `migrations/..0700_reference_only_for_cash_out.sql` | Reference number is required for cash-out only; cash-in has none. **Run once if you already ran migrations 1-6.** |
 | `migrations/..0600_search_and_staff_functions.sql` | Phase 4: History search, totals for filters, owner-only staff list. **Run once if you already ran migrations 1-5.** |
-| `setup_all.sql` | All seven migrations joined into ONE file (for a brand-new project only). |
+| `setup_all.sql` | All eight migrations joined into ONE file (for a brand-new project only). |
 | `bootstrap_owner.sql` | Make the first owner and activate staff. Run by hand. |
 | `seed.sql` | OPTIONAL fake data. Development project only. |
-| `tests/rls_tests.sql` | 54 security checks (46-50 need migration 6, 51-54 need migration 7). Saves nothing. |
+| `tests/rls_tests.sql` | 68 security checks (46-50 need migration 6, 51-54 migration 7, 55-68 migration 8). Saves nothing. |
 | `tests/anon_access_test.ps1` | Confirms a logged-out visitor gets nothing. |
 
 ## How the security works (short version)
@@ -102,6 +103,10 @@ Never delete a login that has transactions. Deactivate it instead.
 
 Paste `seed.sql` into the SQL Editor and run it. It only works if an owner exists and there
 are no transactions yet. **Never run it on the project your store really uses.**
+
+## Already ran migrations 1-7? Add service fees
+
+Open `migrations/20261014000800_fee_tiers.sql`, paste it into the SQL Editor, and Run. Do **not** re-run `setup_all.sql`. Existing records are kept (they get a fee of 0.00, because no fee was charged when they were recorded). Then, in the app, the owner opens **Fees & Charges** and enters the fee table.
 
 ## Already ran migrations 1-6? Upgrade to the cash-in/cash-out reference rule
 

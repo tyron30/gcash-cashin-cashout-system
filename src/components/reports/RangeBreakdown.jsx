@@ -33,6 +33,8 @@ export default function RangeBreakdown({ rows }) {
                 <dd className="text-right font-semibold tabular-nums">{formatPeso(row.cashOutTotal)}</dd>
                 <dt className="text-slate-600">Volume</dt>
                 <dd className="text-right font-semibold tabular-nums">{formatPeso(row.volume)}</dd>
+                <dt className="text-slate-600">Fees</dt>
+                <dd className="text-right font-semibold tabular-nums">{formatPeso(row.feeTotal)}</dd>
                 {row.voidedCount > 0 && (
                   <>
                     <dt className="text-slate-600">Voided</dt>
@@ -52,6 +54,7 @@ export default function RangeBreakdown({ rows }) {
                 <th className="px-4 py-3 text-right">Cash In</th>
                 <th className="px-4 py-3 text-right">Cash Out</th>
                 <th className="px-4 py-3 text-right">Volume</th>
+                <th className="px-4 py-3 text-right">Fees</th>
                 <th className="px-4 py-3 text-right">Net movement</th>
                 <th className="px-4 py-3 text-right">Valid</th>
                 <th className="px-4 py-3 text-right">Voided</th>
@@ -69,6 +72,7 @@ export default function RangeBreakdown({ rows }) {
                   <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatPeso(row.cashInTotal)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatPeso(row.cashOutTotal)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums">{formatPeso(row.volume)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatPeso(row.feeTotal)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatSignedPeso(row.netMovement)}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{row.validCount}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{row.voidedCount}</td>

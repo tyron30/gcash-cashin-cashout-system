@@ -54,6 +54,8 @@ export function buildTransactionsCsv({
       'Reference Number',
       'Type',
       'Amount (PHP)',
+      'Fee (PHP)',
+      'Total Paid (PHP)',
       'Sender / Receiver',
       'Staff',
       'Status',
@@ -72,6 +74,8 @@ export function buildTransactionsCsv({
         referenceCell(t.referenceNumber),
         t.type === 'cash_in' ? 'Cash In' : 'Cash Out',
         money(t.amount),
+        money(t.feeAmount ?? 0),
+        money(t.totalAmount ?? Number(t.amount) + Number(t.feeAmount ?? 0)),
         sanitizeText(t.name),
         sanitizeText(t.staffName),
         voided ? 'Voided' : 'Completed',
@@ -88,6 +92,7 @@ export function buildTransactionsCsv({
   lines.push(toRow(['Total Cash Out (PHP)', money(totals.cashOutTotal)]))
   lines.push(toRow(['Combined Transaction Volume (PHP)', money(totals.volume)]))
   lines.push(toRow(['Net Cash Movement (PHP)', money(totals.netMovement)]))
+  lines.push(toRow(['Total Fees Collected (PHP)', money(totals.feeTotal ?? 0)]))
   lines.push(toRow(['Cash-In Count', totals.cashInCount]))
   lines.push(toRow(['Cash-Out Count', totals.cashOutCount]))
   lines.push(toRow(['Valid Transactions', totals.validCount]))

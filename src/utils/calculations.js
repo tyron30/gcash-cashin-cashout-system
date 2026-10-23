@@ -3,6 +3,7 @@ const toCentavos = (amount) => Math.round(Number(amount) * 100)
 export function calculateDailyTotals(transactions) {
   let cashInCentavos = 0
   let cashOutCentavos = 0
+  let feeCentavos = 0
   let cashInCount = 0
   let cashOutCount = 0
   let voidedCount = 0
@@ -13,6 +14,10 @@ export function calculateDailyTotals(transactions) {
       continue
     }
     if (transaction.status !== 'completed') continue
+
+    if (transaction.type === 'cash_in' || transaction.type === 'cash_out') {
+      feeCentavos += toCentavos(transaction.feeAmount ?? 0) // fees are earned on both
+    }
 
     if (transaction.type === 'cash_in') {
       cashInCentavos += toCentavos(transaction.amount)
@@ -28,6 +33,7 @@ export function calculateDailyTotals(transactions) {
     cashOutTotal: cashOutCentavos / 100,
     volume: (cashInCentavos + cashOutCentavos) / 100,
     netMovement: (cashInCentavos - cashOutCentavos) / 100,
+    feeTotal: feeCentavos / 100,
     cashInCount,
     cashOutCount,
     validCount: cashInCount + cashOutCount,
@@ -59,7 +65,7 @@ export function groupTotalsByStaff(transactions) {
 // ---------- Added in Phase 4 ----------
 
 // Builds the totals object from database numbers. Money is added in centavos.
-export function buildTotals({ cashInTotal, cashOutTotal, cashInCount, cashOutCount, voidedCount }) {
+export function buildTotals({ cashInTotal, cashOutTotal, feeTotal, cashInCount, cashOutCount, voidedCount }) {
   const inCentavos = toCentavos(cashInTotal ?? 0)
   const outCentavos = toCentavos(cashOutTotal ?? 0)
   const inCount = Number(cashInCount ?? 0)
@@ -69,6 +75,7 @@ export function buildTotals({ cashInTotal, cashOutTotal, cashInCount, cashOutCou
     cashOutTotal: outCentavos / 100,
     volume: (inCentavos + outCentavos) / 100,
     netMovement: (inCentavos - outCentavos) / 100,
+    feeTotal: toCentavos(feeTotal ?? 0) / 100,
     cashInCount: inCount,
     cashOutCount: outCount,
     validCount: inCount + outCount,
@@ -83,7 +90,9 @@ export function sumTotals(rows) {
   let inCount = 0
   let outCount = 0
   let voided = 0
+  let feeCentavos = 0
   for (const row of rows) {
+    feeCentavos += toCentavos(row.feeTotal ?? 0)
     inCentavos += toCentavos(row.cashInTotal)
     outCentavos += toCentavos(row.cashOutTotal)
     inCount += row.cashInCount
@@ -93,6 +102,7 @@ export function sumTotals(rows) {
   return buildTotals({
     cashInTotal: inCentavos / 100,
     cashOutTotal: outCentavos / 100,
+    feeTotal: feeCentavos / 100,
     cashInCount: inCount,
     cashOutCount: outCount,
     voidedCount: voided,

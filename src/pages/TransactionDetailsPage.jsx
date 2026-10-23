@@ -82,6 +82,11 @@ export default function TransactionDetailsPage() {
         <p className={`mt-3 text-3xl font-bold tabular-nums ${isVoided ? 'text-slate-500 line-through' : ''}`}>
           {formatPeso(data.amount)}
         </p>
+        {data.feeAmount > 0 && (
+          <p className="mt-1 text-sm text-slate-700">
+            + {formatPeso(data.feeAmount)} fee = <span className="font-semibold">{formatPeso(data.totalAmount)}</span> paid by the customer
+          </p>
+        )}
         {data.referenceNumber && <p className="mt-1 font-mono text-sm text-slate-600">{data.referenceNumber}</p>}
       </div>
 
@@ -94,6 +99,8 @@ export default function TransactionDetailsPage() {
 
       <div className="rounded-2xl border border-slate-200 bg-white px-5 shadow-sm">
         <dl className="divide-y divide-slate-100">
+          <Row label="Fee charged">{formatPeso(data.feeAmount)}</Row>
+          <Row label="Customer paid in total">{formatPeso(data.totalAmount)}</Row>
           <Row label="Sender / receiver">
             {data.name || <span className="font-normal italic text-slate-500">No name</span>}
           </Row>

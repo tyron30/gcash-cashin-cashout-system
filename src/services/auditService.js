@@ -3,7 +3,7 @@ import { call } from './errors'
 
 export const AUDIT_PAGE_SIZE = 20
 
-const ENTITY_TYPES = ['transaction', 'daily_closing', 'profile', 'store_settings']
+const ENTITY_TYPES = ['transaction', 'daily_closing', 'profile', 'store_settings', 'fee_tiers']
 
 export async function listAuditLogs({ entityType = 'all', page = 1 } = {}) {
   const from = (Math.max(1, page) - 1) * AUDIT_PAGE_SIZE

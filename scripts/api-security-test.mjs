@@ -65,7 +65,7 @@ const createArgs = (extra = {}) => ({
 })
 
 console.log('\n--- Logged-out visitor ---')
-for (const table of ['transactions', 'profiles', 'audit_logs', 'daily_closings', 'store_settings']) {
+for (const table of ['transactions', 'profiles', 'audit_logs', 'daily_closings', 'store_settings', 'fee_tiers']) {
   check(`visitor cannot read ${table}`, nothing(await anon.from(table).select('*').limit(1)))
 }
 check('visitor cannot create_transaction', blocked(await anon.rpc('create_transaction', createArgs())))
@@ -87,6 +87,11 @@ const id1 = first.data.id
 created.push(id1)
 check('staff can record a transaction', Boolean(id1))
 check('a cash-in needs no reference number (stored blank)', first.data.reference_number === null, `got ${first.data.reference_number}`)
+check(
+  'the database added the fee and total (total = amount + fee)',
+  Number(first.data.total_amount) === Number(first.data.amount) + Number(first.data.fee_amount),
+  JSON.stringify({ amount: first.data.amount, fee: first.data.fee_amount, total: first.data.total_amount }),
+)
 check('business date is today (Manila)', first.data.business_date === today, `got ${first.data.business_date}`)
 
 const again = await staff.rpc('create_transaction', createArgs({ p_client_request_id: key }))
@@ -96,6 +101,11 @@ check('a cash-out WITHOUT a reference is rejected', blocked(await staff.rpc('cre
 const cashOut = await staff.rpc('create_transaction', createArgs({ p_transaction_type: 'cash_out', p_reference_number: reference() }))
 if (cashOut.data?.id) created.push(cashOut.data.id)
 check('a cash-out WITH a reference saves', !cashOut.error && Boolean(cashOut.data?.reference_number), cashOut.error?.message)
+
+check('a save is refused when the screen showed a different fee', blocked(await staff.rpc('create_transaction', createArgs({ p_expected_fee: 999999 }))))
+check('staff can read the fee table', !(await staff.from('fee_tiers').select('*')).error)
+check('staff cannot change the fee table (function)', blocked(await staff.rpc('save_fee_tiers', { p_tiers: [{ max_amount: 100, fee_amount: 0 }] })))
+check('staff cannot write to the fee table directly', nothing(await staff.from('fee_tiers').update({ fee_amount: 0 }).neq('max_amount', 0).select()) && blocked(await staff.from('fee_tiers').insert({ max_amount: 99999, fee_amount: 0 })))
 
 for (const amount of [0, -5, 10.123, 1000000]) {
   check(`staff cannot save amount ${amount}`, blocked(await staff.rpc('create_transaction', createArgs({ p_amount: amount }))))
@@ -165,6 +175,7 @@ check('staff role is still "staff"', people.data?.find((p) => p.id === staffUser
 check('owner cannot demote themselves', blocked(await owner.rpc('admin_update_profile', { p_user_id: ownerUser.id, p_role: 'staff', p_is_active: null, p_full_name: null })))
 check('owner cannot rewrite the audit log', nothing(await owner.from('audit_logs').update({ action: 'hacked' }).eq('entity_id', id1).select()))
 check('owner cannot delete the audit log', nothing(await owner.from('audit_logs').delete().eq('entity_id', id1).select()))
+check('owner cannot write to the fee table directly either', blocked(await owner.from('fee_tiers').insert({ max_amount: 88888, fee_amount: 0 })))
 check('owner cannot write to transactions directly', blocked(await owner.from('transactions').insert({ reference_number: reference(), transaction_type: 'cash_in', amount: 1, created_by: ownerUser.id, business_date: today })))
 
 // Clean up: void any test record that is still active (records are never deleted).

@@ -30,6 +30,11 @@ begin
     return;
   end if;
 
+  -- SAMPLE fee table (development only). Your real fees are set on the Fees page.
+  if not exists (select 1 from public.fee_tiers) then
+    insert into public.fee_tiers (max_amount, fee_amount) values (100, 10), (500, 15), (1000, 20), (2000, 30), (5000, 50);
+  end if;
+
   for v_day in 0..2 loop
     for v_i in 1..8 loop
       v_ts := ((public.current_business_date() - v_day)::timestamp
@@ -41,13 +46,14 @@ begin
       v_voided := (v_day = 1 and v_i = 3);
 
       insert into public.transactions
-        (reference_number, transaction_type, amount, sender_receiver_name,
+        (reference_number, transaction_type, amount, fee_amount, sender_receiver_name,
          transaction_timestamp, status, void_reason, voided_at, voided_by, created_by)
       values (
         case when v_i % 2 = 1 then null   -- cash-in: no reference number
              else public.normalize_reference((5000000000000 + v_day * 100000000 + v_i * 7919)::text) end,
         case when v_i % 2 = 1 then 'cash_in' else 'cash_out' end,
         v_amounts[v_i],
+        coalesce(public.fee_for_amount(v_amounts[v_i]), 0),
         v_names[v_i],
         v_ts,
         case when v_voided then 'voided' else 'completed' end,

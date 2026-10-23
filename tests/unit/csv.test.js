@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import { buildTransactionsCsv, sanitizeText } from '../../src/utils/csv.js'
 import { buildTotals } from '../../src/utils/calculations.js'
 
-const totals = buildTotals({ cashInTotal: 1500.5, cashOutTotal: 0, cashInCount: 1, cashOutCount: 0, voidedCount: 1 })
+const totals = buildTotals({ cashInTotal: 1500.5, cashOutTotal: 0, feeTotal: 15, cashInCount: 1, cashOutCount: 0, voidedCount: 1 })
 
 function make(overrides = {}) {
   return {
@@ -12,6 +12,8 @@ function make(overrides = {}) {
     referenceNumber: '0143872590316',
     type: 'cash_in',
     amount: 1500.5,
+    feeAmount: 15,
+    totalAmount: 1515.5,
     name: 'JU**** DE**',
     staffName: 'Ana Reyes',
     status: 'completed',
@@ -89,6 +91,16 @@ describe('CSV format for Excel', () => {
   it('quotes commas, quotes and line breaks', () => {
     const csv = build([make({ notes: 'a,b "c"\nline2' })])
     assert.ok(csv.includes('"a,b ""c""\nline2"'))
+  })
+  it('shows the fee and what the customer paid, and the fees total', () => {
+    const csv = build([make()])
+    assert.ok(csv.includes('Fee (PHP),Total Paid (PHP)'))
+    assert.ok(csv.includes(',1500.50,15.00,1515.50,'))
+    assert.ok(csv.includes('Total Fees Collected (PHP),15.00'))
+  })
+  it('older records without a fee export as 0.00 fee', () => {
+    const csv = build([make({ feeAmount: undefined, totalAmount: undefined })])
+    assert.ok(csv.includes(',1500.50,0.00,1500.50,'))
   })
   it('lists voided records but marks them as NOT counted', () => {
     const csv = build([make({ status: 'voided', voidReason: 'Wrong amount' })])

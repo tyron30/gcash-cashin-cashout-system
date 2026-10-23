@@ -6,12 +6,12 @@ This is the quality gate before deployment. Work top to bottom.
 
 | Command | What it proves | Needs |
 |---|---|---|
-| `npm test` | 100 automated checks of money math, validation, CSV safety, Manila dates, error handling, and the SQL security rules | nothing |
+| `npm test` | 132 automated checks of money math, validation, CSV safety, Manila dates, error handling, and the SQL security rules | nothing |
 | `npm run check:contrast` | Text colours meet WCAG AA contrast | nothing |
 | `npm run build` | The whole app compiles for production | npm install |
 | `npm run check:security` | No secrets or risky code in the project or in the built website | run `build` first |
 | `npm run test:api` | The REAL Supabase API refuses everything it should (see section 3) | test logins |
-| `supabase/tests/rls_tests.sql` | 54 database security checks, saves nothing | SQL Editor |
+| `supabase/tests/rls_tests.sql` | 68 database security checks, saves nothing | SQL Editor |
 | `supabase/tests/anon_access_test.ps1` | A logged-out visitor gets nothing | `.env` |
 
 Run `npm test`, `npm run build`, and `npm run check:security` after **every** future change.
@@ -85,6 +85,16 @@ Passwords stay only in this PowerShell window and are cleared at the end. Every 
 - [ ] **Cash Out** with the same reference twice: the warning appears; "Save anyway" works
 - [ ] Turn off Wi-Fi: the Save button pauses with a warning; turn it on and it works again
 - [ ] Dashboard total changes by exactly the amount saved
+
+### 4.3b Fees and charges
+- [ ] Owner opens **Fees & Charges**, adds "up to 100 -> fee 10" and "up to 500 -> fee 15", and saves. Ranges show as ₱1 – ₱100 and ₱101 – ₱500
+- [ ] "Try an amount": 500 shows Fee ₱15 and Customer pays ₱515; 100 shows ₱10; 101 shows ₱15
+- [ ] Staff opens Cash In, types 500: the panel shows Amount ₱500, Fee ₱15, Customer pays ₱515. Same in Cash Out
+- [ ] After saving, the record shows the fee; the dashboard **Fees Collected** goes up by ₱15
+- [ ] Void that record: Fees Collected goes back down
+- [ ] Owner changes the table (500 -> fee 20): the OLD record still shows fee ₱15; a NEW ₱500 record shows ₱20
+- [ ] An amount above the highest tier shows the amber "no fee is set" note
+- [ ] Staff cannot open `/fees` (no access page); the Reports CSV has Fee and Total Paid columns
 
 ### 4.4 Owner actions
 - [ ] Edit an amount only: History shows ONE change (Amount), not a time change

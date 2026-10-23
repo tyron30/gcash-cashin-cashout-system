@@ -12,7 +12,7 @@ const code = sql.replace(/--[^\n]*/g, '') // ignore comments
 // Functions that must NOT be callable by the app (internal helpers and triggers).
 const INTERNAL = new Set([
   'assert_admin', 'store_timezone', 'normalize_reference', 'write_audit_log', 'validate_transaction_fields',
-  'validate_transaction_input', 'set_updated_at', 'prevent_modification', 'handle_new_user', 'guard_profile_changes', 'set_business_date',
+  'validate_transaction_input', 'fee_for_amount', 'set_updated_at', 'prevent_modification', 'handle_new_user', 'guard_profile_changes', 'set_business_date',
   'protect_transaction_fields', 'enforce_open_business_day',
 ])
 
@@ -22,7 +22,7 @@ const uniqueFunctions = [...new Set(functions)]
 
 describe('database security rules (static check of the SQL files)', () => {
   it('finds the expected tables', () => {
-    assert.deepEqual(tables.sort(), ['audit_logs', 'daily_closings', 'profiles', 'store_settings', 'transactions'])
+    assert.deepEqual(tables.sort(), ['audit_logs', 'daily_closings', 'fee_tiers', 'profiles', 'store_settings', 'transactions'])
   })
 
   it('every table has Row Level Security enabled', () => {
@@ -46,7 +46,7 @@ describe('database security rules (static check of the SQL files)', () => {
   })
 
   it('money tables have NO write policies and no write permissions', () => {
-    for (const table of ['transactions', 'audit_logs', 'daily_closings', 'store_settings']) {
+    for (const table of ['transactions', 'audit_logs', 'daily_closings', 'store_settings', 'fee_tiers']) {
       assert.ok(!new RegExp(`create policy \\w+\\s+on public\\.${table} for (insert|update|delete|all)`).test(code), table)
       assert.ok(!new RegExp(`grant[^;]*(insert|update|delete|all)[^;]*on public\\.${table}`, 'i').test(code), table)
     }
@@ -113,6 +113,38 @@ describe('database security rules (static check of the SQL files)', () => {
       if (early.has(name)) continue // re-created: it keeps its permissions
       assert.match(code, new RegExp(`revoke execute on function public\\.${name}\\(`), `${name} is not revoked`)
     }
+  })
+
+  it('dropped-and-recreated functions get their permissions back (a DROP wipes them)', () => {
+    // Walk the migrations in order, like the database does.
+    const granted = new Set()
+    const created = new Set()
+    for (const file of files) {
+      const body = readFileSync(new URL(file, dir), 'utf8').replace(/--[^\n]*/g, '')
+      const dropped = [...body.matchAll(/drop function (?:if exists )?public\.(\w+)\(/g)].map((m) => m[1])
+      const makes = [...body.matchAll(/create or replace function public\.(\w+)/g)].map((m) => m[1])
+      for (const name of dropped) granted.delete(name)
+      for (const name of makes) created.add(name)
+      for (const m of body.matchAll(/grant execute on function public\.(\w+)\(/g)) granted.add(m[1])
+      // a function dropped AND re-created in the same file starts with default (public) rights: it must be revoked here
+      for (const name of dropped.filter((n) => makes.includes(n))) {
+        assert.match(body, new RegExp(`revoke execute on function public\\.${name}\\(`), `${file}: ${name} re-created but not revoked`)
+      }
+    }
+    for (const name of created) {
+      if (INTERNAL.has(name)) assert.ok(!granted.has(name), `${name} is internal but granted`)
+      else assert.ok(granted.has(name), `${name} lost its permission after a DROP and was never granted again`)
+    }
+  })
+
+  it('fee rules: tiers are read-only for everyone, owner-written through one function, and kept per transaction', () => {
+    assert.match(code, /create policy fee_tiers_select\s+on public\.fee_tiers for select to authenticated/)
+    assert.match(code, /grant select on public\.fee_tiers to authenticated/)
+    assert.match(code, /constraint fee_tiers_max_unique unique \(max_amount\)/)
+    assert.match(code, /perform public\.assert_admin\(\);[\s\S]*?delete from public\.fee_tiers/)
+    assert.match(code, /fee_amount numeric\(12, 2\) not null default 0/)
+    assert.match(code, /total_amount numeric\(12, 2\)\s+generated always as \(amount \+ fee_amount\) stored/)
+    assert.match(code, /coalesce\(public\.fee_for_amount\(p_amount\), 0\)/) // the DATABASE decides the fee
   })
 
   it('the reference number rule: required for cash-out only, enforced by the database', () => {

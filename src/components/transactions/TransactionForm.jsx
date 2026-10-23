@@ -5,10 +5,12 @@ import { buttonClass } from '../common/Button'
 import FormField, { fieldProps } from '../forms/FormField'
 import { inputClass } from '../forms/inputStyles'
 import { useAuth } from '../../hooks/useAuth'
+import { useFeeTiers } from '../../hooks/useFeeTiers'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import { useToast } from '../../hooks/useToast'
 import { createTransaction, findDuplicateReference } from '../../services/transactionService'
 import { formatPeso } from '../../utils/currency'
+import { calculateFee } from '../../utils/fees'
 import { createUuid } from '../../utils/uuid'
 import { formatDateTime, getManilaNowParts, toManilaTimestamp } from '../../utils/date'
 import {
@@ -21,6 +23,7 @@ import {
   validateNotes,
   validateReference,
 } from '../../utils/validation'
+import FeePreview from './FeePreview'
 import StatusBadge from './StatusBadge'
 import { LoaderCircle } from 'lucide-react'
 
@@ -52,6 +55,7 @@ export default function TransactionForm({ type }) {
   const { profile, isAdmin } = useAuth()
   const toast = useToast()
   const online = useOnlineStatus()
+  const { tiers, ready: feesReady, reload: reloadFees } = useFeeTiers()
 
   const referenceRef = useRef(null)
   const amountRef = useRef(null)
@@ -144,18 +148,23 @@ export default function TransactionForm({ type }) {
           notes: values.notes,
           transactionTimestamp: adjustTime ? toManilaTimestamp(dateValue, timeValue) : null,
           submissionKey: submissionKeyRef.current,
+          // The fee shown on screen. The database refuses to save if the owner changed the fees meanwhile.
+          expectedFee: feeInfo ? feeInfo.fee : null,
         },
         profile,
       )
 
       // Only reached after the save is confirmed.
       setLastSaved(transaction)
-      toast.success(`${style.label} saved: ${formatPeso(transaction.amount)}`)
+      const feeText =
+        transaction.feeAmount > 0 ? ` + ${formatPeso(transaction.feeAmount)} fee = ${formatPeso(transaction.totalAmount)}` : ''
+      toast.success(`${style.label} saved: ${formatPeso(transaction.amount)}${feeText}`)
       resetForm()
     } catch (error) {
       const message = error.message || 'Could not save the transaction. Please try again.'
       setSubmitError(message)
       toast.error(message) // the form keeps everything you typed
+      if (/fee for this amount/i.test(message)) reloadFees() // the owner changed the fees: show the new total
     } finally {
       submittingRef.current = false
       setSubmitting(false)
@@ -181,6 +190,7 @@ export default function TransactionForm({ type }) {
 
   const parsedAmount = parseMoney(values.amount)
   const showPreview = !Number.isNaN(parsedAmount) && parsedAmount > 0
+  const feeInfo = feesReady && showPreview ? calculateFee(tiers, parsedAmount) : null
   const { Icon } = style
 
   return (
@@ -192,8 +202,10 @@ export default function TransactionForm({ type }) {
         >
           <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <p className="min-w-0">
-            <span className="font-semibold">Saved:</span> {formatPeso(lastSaved.amount)} ·{' '}
-            {lastSaved.referenceNumber ? `· ${lastSaved.referenceNumber}` : ''}.{' '}
+            <span className="font-semibold">Saved:</span> {formatPeso(lastSaved.amount)}
+            {lastSaved.feeAmount > 0 &&
+              ` + ${formatPeso(lastSaved.feeAmount)} fee = ${formatPeso(lastSaved.totalAmount)}`}
+            {lastSaved.referenceNumber ? ` · ${lastSaved.referenceNumber}` : ''}.{' '}
             <Link to={`/transactions/${lastSaved.id}`} className="font-semibold underline">
               View
             </Link>
@@ -346,6 +358,8 @@ export default function TransactionForm({ type }) {
             })}
           </div>
         </FormField>
+
+        <FeePreview amount={parsedAmount} info={feeInfo} />
 
         <FormField
           id={id('name')}

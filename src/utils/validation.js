@@ -121,3 +121,14 @@ export function validateReason(value) {
   if (text.length > 200) return 'Keep the reason under 200 characters.'
   return ''
 }
+
+// A fee typed by the owner when correcting a record. Zero is allowed (no fee).
+export function validateFee(value) {
+  const cleaned = cleanMoneyInput(value)
+  if (!cleaned) return 'Enter the fee (0 if there is none).'
+  if (cleaned.startsWith('-')) return 'The fee cannot be negative.'
+  const amount = parseMoney(value)
+  if (Number.isNaN(amount)) return 'Enter a valid peso amount for the fee.'
+  if (amount > MAX_AMOUNT) return 'The fee is too large.'
+  return ''
+}

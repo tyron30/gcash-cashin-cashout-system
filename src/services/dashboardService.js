@@ -8,6 +8,7 @@ export function totalsFromDailyRow(row) {
   return buildTotals({
     cashInTotal: row?.cash_in_total,
     cashOutTotal: row?.cash_out_total,
+    feeTotal: row?.fee_total,
     cashInCount: row?.cash_in_count,
     cashOutCount: row?.cash_out_count,
     voidedCount: row?.voided_count,

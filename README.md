@@ -19,7 +19,7 @@ After changing `.env`, stop (Ctrl + C) and start again.
 - Never put the Supabase secret / service_role key in this project.
 
 ## Checks
-    npm test                 # 100 automated checks
+    npm test                 # 132 automated checks
     npm run build            # does it compile?
     npm run check:security   # secrets / risky code scan (after build)
     npm run check:contrast   # accessibility colour contrast
@@ -41,5 +41,14 @@ Full guide: `docs/PHASE6_DEPLOYMENT.md`
 | Amount | Required | Required |
 | Sender / receiver name | Optional | Optional |
 | Duplicate-reference warning | n/a | Yes |
+| Fee (service charge) | From the owner's fee table | From the owner's fee table |
+| Customer pays | amount + fee | amount + fee |
 
 The rule is enforced in the database too (migration 7), not just in the form.
+
+## Fees and charges
+The owner builds the fee table on **Fees & Charges** (for example: up to ₱100 → ₱10, up to ₱500 → ₱15).
+Each tier covers amounts above the previous tier up to its own limit. The fee is the same for cash-in and
+cash-out and is added to the amount (₱500 + ₱15 = ₱515). The **database** works out the fee, so staff cannot
+change it. Each record keeps the fee it was charged, so changing the table never changes old records.
+**Fees Collected** is shown separately from the money moved, and voided records earn no fee.

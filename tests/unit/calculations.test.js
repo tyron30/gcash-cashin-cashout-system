@@ -8,7 +8,7 @@ import {
   sumTotals,
 } from '../../src/utils/calculations.js'
 
-const tx = (type, amount, status = 'completed', staffName = 'Ana') => ({ type, amount, status, staffName })
+const tx = (type, amount, status = 'completed', staffName = 'Ana', feeAmount = 0) => ({ type, amount, status, staffName, feeAmount })
 
 describe('daily totals', () => {
   it('adds cash in and cash out separately and counts them', () => {
@@ -55,6 +55,36 @@ describe('daily totals', () => {
     assert.equal(calculateDailyTotals(list).volume, 1600)
     list[1] = { ...list[1], status: 'voided' } // a void
     assert.equal(calculateDailyTotals(list).volume, 1200)
+  })
+})
+
+describe('fees collected', () => {
+  it('adds the fees of cash-in AND cash-out separately from the money moved', () => {
+    const t = calculateDailyTotals([
+      tx('cash_in', 500, 'completed', 'Ana', 15),
+      tx('cash_out', 100, 'completed', 'Ana', 10),
+    ])
+    assert.equal(t.feeTotal, 25)
+    assert.equal(t.volume, 600) // fees are NOT part of the money moved
+    assert.equal(t.netMovement, 400)
+  })
+  it('a voided transaction earns no fee', () => {
+    const t = calculateDailyTotals([tx('cash_in', 500, 'completed', 'Ana', 15), tx('cash_in', 500, 'voided', 'Ana', 15)])
+    assert.equal(t.feeTotal, 15)
+  })
+  it('old records without a fee count as zero', () => {
+    assert.equal(calculateDailyTotals([{ type: 'cash_in', amount: 100, status: 'completed' }]).feeTotal, 0)
+  })
+  it('fees add up exactly (no 0.1 + 0.2 drift)', () => {
+    const t = calculateDailyTotals([tx('cash_in', 1, 'completed', 'A', 0.1), tx('cash_out', 1, 'completed', 'A', 0.2)])
+    assert.equal(t.feeTotal, 0.3)
+  })
+  it('buildTotals, sumTotals and per-staff totals carry fees', () => {
+    assert.equal(buildTotals({ cashInTotal: 1, cashOutTotal: 1, feeTotal: '12.50', cashInCount: 1, cashOutCount: 1, voidedCount: 0 }).feeTotal, 12.5)
+    const day = (fee) => buildTotals({ cashInTotal: 0, cashOutTotal: 0, feeTotal: fee, cashInCount: 0, cashOutCount: 0, voidedCount: 0 })
+    assert.equal(sumTotals([day(0.1), day(0.2)]).feeTotal, 0.3)
+    const groups = groupTotalsByStaff([tx('cash_in', 100, 'completed', 'Ana', 10), tx('cash_in', 100, 'completed', 'Ben', 10), tx('cash_out', 50, 'completed', 'Ana', 10)])
+    assert.equal(groups.find((g) => g.staffName === 'Ana').feeTotal, 20)
   })
 })
 

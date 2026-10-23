@@ -25,6 +25,10 @@ export default function StaffBreakdown({ byStaff }) {
                 <dt className="text-slate-600">Volume</dt>
                 <dd className="font-bold tabular-nums">{formatPeso(staff.volume)}</dd>
               </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-slate-600">Fees collected</dt>
+                <dd className="font-semibold tabular-nums">{formatPeso(staff.feeTotal)}</dd>
+              </div>
             </dl>
           </div>
         ))}

@@ -125,7 +125,8 @@ export default function TransactionsPage() {
           <p className="text-sm text-slate-700" aria-live="polite">
             <span className="font-semibold">{data.total}</span> {data.total === 1 ? 'record' : 'records'} · Cash In{' '}
             <span className="font-semibold tabular-nums">{formatPeso(data.summary.cashInTotal)}</span> · Cash Out{' '}
-            <span className="font-semibold tabular-nums">{formatPeso(data.summary.cashOutTotal)}</span>{' '}
+            <span className="font-semibold tabular-nums">{formatPeso(data.summary.cashOutTotal)}</span> · Fees{' '}
+            <span className="font-semibold tabular-nums">{formatPeso(data.summary.feeTotal)}</span>{' '}
             <span className="text-slate-500">(voided not counted)</span>
           </p>
 

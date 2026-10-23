@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   ArrowUpRight,
   Banknote,
+  Coins,
   Info,
   Receipt,
 } from 'lucide-react'
@@ -32,7 +33,7 @@ export default function SummaryCards({ totals, isToday }) {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Combined Volume"
           value={formatPeso(totals.volume)}
@@ -47,6 +48,13 @@ export default function SummaryCards({ totals, isToday }) {
           tone="amber"
         />
         <StatCard
+          label="Fees Collected"
+          value={formatPeso(totals.feeTotal)}
+          helper="Service charges (voided not counted)"
+          icon={Coins}
+          tone="green"
+        />
+        <StatCard
           label={isToday ? 'Transactions Today' : 'Transactions'}
           value={totals.validCount}
           helper={
@@ -55,7 +63,6 @@ export default function SummaryCards({ totals, isToday }) {
               : 'No voided transactions'
           }
           icon={Receipt}
-          className="min-[420px]:col-span-2 lg:col-span-1"
         />
       </div>
 
@@ -63,9 +70,10 @@ export default function SummaryCards({ totals, isToday }) {
         <Info className="mt-0.5 size-4 shrink-0 text-slate-500" aria-hidden="true" />
         <p>
           Volume is the total amount that passed through GCash.{' '}
-          <span className="font-semibold">It is not your earnings.</span> Net
-          cash movement is only a transaction-based figure. It is not your
-          actual cash on hand or profit.
+          <span className="font-semibold">It is not your earnings.</span>{' '}
+          Fees Collected is what you charged customers; it is not net profit
+          because it does not subtract your costs. Net cash movement is only a
+          transaction-based figure, not your actual cash on hand.
         </p>
       </div>
     </div>

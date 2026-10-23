@@ -108,6 +108,13 @@ declare
   v_req3   uuid := gen_random_uuid();
   v_req4   uuid := gen_random_uuid();
   v_req5   uuid := gen_random_uuid();
+  v_req6   uuid;
+  v_req7   uuid := gen_random_uuid();
+  v_sql    text;
+  v_id     uuid;
+  v_id500  uuid;
+  v_id101  uuid;
+  v_expected numeric;
   v_tx     public.transactions;
   v_tx2    public.transactions;
   v_old    public.transactions;
@@ -322,6 +329,7 @@ begin
   v_err := pg_temp.try_as(v_admin, format('select public.admin_update_profile(%L, null, false, null)', v_staff));
   select role into v_role from public.profiles where id = v_staff and is_active = false;
   v_report := v_report || pg_temp.line(v_err is null and v_role = 'staff', '45. Owner can deactivate a staff account', coalesce(v_err, 'done'));
+  update public.profiles set is_active = true where id = v_staff; -- turn staff back on for the tests below
 
   -- ---------------- PHASE 4 FUNCTIONS (needs migration 6) ----------------
   v_err := pg_temp.try_as(v_staff, 'select * from public.admin_list_profiles()');
@@ -361,6 +369,99 @@ begin
     v_err := sqlerrm;
   end;
   v_report := v_report || pg_temp.line(v_err is not null, '54. The table itself refuses a cash-out with no reference (even for the database admin role)', coalesce(v_err, 'it was ALLOWED'));
+
+  -- ---------------- FEES / CHARGES (needs migration 8) ----------------
+  v_err := pg_temp.try_as(v_staff, format('select public.save_fee_tiers(%L::jsonb)', '[{"max_amount":100,"fee_amount":10}]'));
+  v_report := v_report || pg_temp.line(v_err is not null, '55. Staff cannot change the fee table', coalesce(v_err, 'it was ALLOWED'));
+
+  v_err := pg_temp.try_as(v_admin, format('select public.save_fee_tiers(%L::jsonb)', '[{"max_amount":100,"fee_amount":10},{"max_amount":500,"fee_amount":15}]'));
+  select count(*) into v_n from public.fee_tiers;
+  v_report := v_report || pg_temp.line(v_err is null and v_n = 2, '56. Owner can save the fee table (up to 100 -> 10, up to 500 -> 15)', coalesce(v_err, format('%s tiers saved', v_n)));
+
+  v_n := pg_temp.count_as(v_staff, 'select * from public.fee_tiers');
+  v_report := v_report || pg_temp.line(v_n = 2, '57. Staff can READ the fee table (the form shows the fee)', format('rows visible: %s', v_n));
+  v_n := pg_temp.count_as(null, 'select * from public.fee_tiers');
+  v_report := v_report || pg_temp.line(v_n = -1, '58. A logged-out visitor cannot read the fee table', format('result: %s (-1 = blocked)', v_n));
+
+  v_n := 0;
+  foreach v_sql in array array['insert into public.fee_tiers (max_amount, fee_amount) values (999, 1)', 'update public.fee_tiers set fee_amount = 0', 'delete from public.fee_tiers'] loop
+    if pg_temp.try_as(v_staff, v_sql) is null then v_n := v_n + 1; end if;
+  end loop;
+  v_report := v_report || pg_temp.line(v_n = 0, '59. Staff cannot write to the fee table directly', format('%s of 3 were allowed', v_n));
+
+  v_n := 0;
+  foreach v_sql in array array['insert into public.fee_tiers (max_amount, fee_amount) values (999, 1)', 'update public.fee_tiers set fee_amount = 0', 'delete from public.fee_tiers'] loop
+    if pg_temp.try_as(v_admin, v_sql) is null then v_n := v_n + 1; end if;
+  end loop;
+  v_report := v_report || pg_temp.line(v_n = 0, '60. Even the owner must use the approved function (no direct writes)', format('%s of 3 were allowed', v_n));
+
+  foreach v_amt in array array[500, 100, 101, 100.50, 600, 0.01]::numeric[] loop
+    v_req6 := gen_random_uuid();
+    v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_in', null, v_amt::text, null, v_req6));
+    select * into v_x from public.transactions where client_request_id = v_req6;
+    v_expected := case when v_amt <= 100 then 10 when v_amt <= 500 then 15 else 0 end;
+    v_report := v_report || pg_temp.line(
+      v_err is null and v_x.fee_amount = v_expected and v_x.total_amount = v_amt + v_expected,
+      format('61. Amount %s is charged a fee of %s (customer pays %s)', v_amt, v_expected, v_amt + v_expected),
+      coalesce(v_err, format('recorded fee=%s total=%s', v_x.fee_amount, v_x.total_amount)));
+    if v_amt = 500 then v_id500 := v_x.id; end if;
+    if v_amt = 101 then v_id101 := v_x.id; end if;
+  end loop;
+
+  v_err := pg_temp.try_as(v_staff, format('select public.create_transaction(%L, null, 500, null, null, null, %L, 10)', 'cash_in', gen_random_uuid()));
+  v_report := v_report || pg_temp.line(v_err is not null and v_err ilike '%fee%', '62. If the screen showed a different fee, the save is refused', coalesce(v_err, 'it was ACCEPTED'));
+
+  v_err := pg_temp.try_as(v_staff, format('select public.create_transaction(%L, null, 500, null, null, null, %L, 15)', 'cash_in', v_req7));
+  select * into v_x from public.transactions where client_request_id = v_req7;
+  v_report := v_report || pg_temp.line(v_err is null and v_x.fee_amount = 15, '63. If the screen showed the right fee, it saves', coalesce(v_err, format('fee = %s', v_x.fee_amount)));
+
+  begin
+    update public.transactions set total_amount = 1 where id = v_id500;
+    v_err := null;
+  exception when others then
+    v_err := sqlerrm;
+  end;
+  v_report := v_report || pg_temp.line(v_err is not null, '64. The "customer paid" total cannot be forged (the database calculates it)', coalesce(v_err, 'it was ALLOWED'));
+
+  v_before := pg_temp.num_as(v_admin, format('select fee_total from public.daily_totals(%L, %L)', v_today, v_today));
+  v_req6 := gen_random_uuid();
+  v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_out', '8888999900001', '500', null, v_req6));
+  v_after := pg_temp.num_as(v_admin, format('select fee_total from public.daily_totals(%L, %L)', v_today, v_today));
+  v_report := v_report || pg_temp.line(v_after = v_before + 15, '65. Fees Collected goes up by exactly the fee', format('fees %s -> %s', v_before, v_after));
+  select id into v_id from public.transactions where client_request_id = v_req6;
+  v_err := pg_temp.try_as(v_admin, format('select public.void_transaction(%L, %L)', v_id, 'Fee test void'));
+  v_after := pg_temp.num_as(v_admin, format('select fee_total from public.daily_totals(%L, %L)', v_today, v_today));
+  v_report := v_report || pg_temp.line(v_after = v_before, '65. A voided transaction earns no fee', format('fees back to %s', v_after));
+
+  select * into v_x from public.transactions where id = v_id500;
+  v_err := pg_temp.try_as(v_staff, format('select public.update_transaction(%L, null, %s, null, null, %L, %L, 5)', v_id500, v_x.amount, v_x.transaction_timestamp, 'Staff tries a discount'));
+  v_report := v_report || pg_temp.line(v_err is not null, '66. Staff cannot change a fee', coalesce(v_err, 'it was ALLOWED'));
+  v_err := pg_temp.try_as(v_admin, format('select public.update_transaction(%L, null, %s, null, null, %L, %L, 5)', v_id500, v_x.amount, v_x.transaction_timestamp, 'Discount for a regular customer'));
+  select * into v_x from public.transactions where id = v_id500;
+  v_report := v_report || pg_temp.line(v_err is null and v_x.fee_amount = 5 and v_x.total_amount = v_x.amount + 5, '66. Owner can correct a fee (with a reason)', coalesce(v_err, format('fee is now %s, total %s', v_x.fee_amount, v_x.total_amount)));
+
+  foreach v_sql in array array[
+    '[{"max_amount":100,"fee_amount":10},{"max_amount":100,"fee_amount":20}]',
+    '[{"max_amount":100,"fee_amount":-1}]',
+    '[{"max_amount":0,"fee_amount":5}]',
+    '[{"max_amount":"abc","fee_amount":5}]',
+    '{"max_amount":1,"fee_amount":1}'
+  ] loop
+    v_err := pg_temp.try_as(v_admin, format('select public.save_fee_tiers(%L::jsonb)', v_sql));
+    v_report := v_report || pg_temp.line(v_err is not null, '67. Invalid fee table is rejected: ' || v_sql, coalesce(v_err, 'it was ACCEPTED'));
+  end loop;
+  select count(*) into v_n from public.fee_tiers;
+  v_report := v_report || pg_temp.line(v_n = 2, '67. A rejected table leaves the existing fees untouched', format('%s tiers still there', v_n));
+
+  v_err := pg_temp.try_as(v_admin, format('select public.save_fee_tiers(%L::jsonb)', '[{"max_amount":500,"fee_amount":20}]'));
+  select * into v_x from public.transactions where id = v_id101;
+  v_report := v_report || pg_temp.line(v_err is null and v_x.fee_amount = 15, '68. Changing the fee table does NOT change old records (they keep the fee they were charged)', coalesce(v_err, format('old record still has fee %s', v_x.fee_amount)));
+  v_req6 := gen_random_uuid();
+  v_err := pg_temp.try_as(v_staff, format(v_create, 'cash_in', null, '300', null, v_req6));
+  select * into v_x from public.transactions where client_request_id = v_req6;
+  v_report := v_report || pg_temp.line(v_err is null and v_x.fee_amount = 20, '68. ...but new records use the new fee', coalesce(v_err, format('new record fee = %s', v_x.fee_amount)));
+  select count(*) into v_n from public.audit_logs where action = 'fee_tiers.updated';
+  v_report := v_report || pg_temp.line(v_n >= 2, '68. Fee table changes were written to the audit log', format('%s entries', v_n));
 
   -- ---------------- REPORT ----------------
   v_fails := (length(v_report) - length(replace(v_report, '*** FAIL', ''))) / length('*** FAIL');

@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
-import { ArrowDownLeft, ArrowUpRight, ChevronRight } from 'lucide-react'
-import { formatPeso } from '../../utils/currency'
-import { formatDateTime, formatTime } from '../../utils/date'
+import { ArrowDown, ArrowUp, ChevronRight } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth'
+import { formatPeso, formatPesoCompact } from '../../utils/currency'
+import { formatDateTime, formatShortDate, formatTime } from '../../utils/date'
+import { typeTitle, whoRecorded } from '../../utils/display'
 import StatusBadge from './StatusBadge'
 import TransactionTypeBadge from './TransactionTypeBadge'
 
@@ -9,10 +11,14 @@ function NoName() {
   return <span className="font-normal italic text-slate-500">No name</span>
 }
 
-function TransactionCard({ transaction, showDate }) {
+// One row, in the style of a payments app:
+//   [icon]  Cash-out                      ₱3,000
+//           RU.Y G. · You · 3:39 PM        +₱60   <- the fee, highlighted
+function TransactionCard({ transaction, showDate, userId }) {
   const isCashIn = transaction.type === 'cash_in'
   const isVoided = transaction.status === 'voided'
-  const Icon = isCashIn ? ArrowDownLeft : ArrowUpRight
+  const Icon = isCashIn ? ArrowDown : ArrowUp
+  const time = formatTime(transaction.transactionTimestamp)
 
   return (
     <li>
@@ -21,7 +27,7 @@ function TransactionCard({ transaction, showDate }) {
         className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 active:bg-slate-100"
       >
         <span
-          className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
+          className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${
             isCashIn ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700'
           }`}
         >
@@ -29,39 +35,33 @@ function TransactionCard({ transaction, showDate }) {
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{transaction.name || <NoName />}</p>
-          {showDate ? (
-            <>
-              {transaction.referenceNumber && (
-                <p className="truncate text-xs text-slate-600">{transaction.referenceNumber}</p>
-              )}
-              <p className="truncate text-xs text-slate-500">
-                {formatDateTime(transaction.transactionTimestamp)} · {transaction.staffName}
-              </p>
-            </>
-          ) : (
+          <p className="truncate text-base font-bold leading-tight">{typeTitle(transaction.type)}</p>
+          <p className="truncate text-xs text-slate-600">
+            <span className={transaction.name ? undefined : 'italic'}>{transaction.name || 'No name'}</span>
+            {' · '}
+            {whoRecorded(transaction, userId)}
+            {!showDate && ` · ${time}`}
+          </p>
+          {showDate && (
             <p className="truncate text-xs text-slate-500">
-              {transaction.referenceNumber ? `${transaction.referenceNumber} · ` : ''}
-              {formatTime(transaction.transactionTimestamp)}
+              {formatShortDate(transaction.businessDate)} · {time}
+              {transaction.referenceNumber ? ` · ${transaction.referenceNumber}` : ''}
             </p>
           )}
         </div>
 
         <div className="shrink-0 text-right">
-          <p
-            className={`text-sm font-bold tabular-nums ${
-              isVoided ? 'text-slate-500 line-through' : ''
-            }`}
-          >
-            {formatPeso(transaction.amount)}
+          <p className={`text-base font-bold tabular-nums leading-tight ${isVoided ? 'text-slate-500 line-through' : ''}`}>
+            {formatPesoCompact(transaction.amount)}
           </p>
           {isVoided ? (
             <StatusBadge status="voided" />
           ) : (
-            <p className="text-xs text-slate-500">
-              {isCashIn ? 'Cash In' : 'Cash Out'}
-              {transaction.feeAmount > 0 && ` · +${formatPeso(transaction.feeAmount)} fee`}
-            </p>
+            transaction.feeAmount > 0 && (
+              <p className="text-sm font-bold tabular-nums leading-tight text-emerald-700">
+                +{formatPesoCompact(transaction.feeAmount)}
+              </p>
+            )
           )}
         </div>
         <ChevronRight className="size-4 shrink-0 text-slate-400" aria-hidden="true" />
@@ -70,7 +70,7 @@ function TransactionCard({ transaction, showDate }) {
   )
 }
 
-function TransactionTable({ transactions, showDate }) {
+function TransactionTable({ transactions, showDate, userId }) {
   return (
     <div className="hidden overflow-x-auto lg:block">
       <table className="w-full text-left text-sm">
@@ -80,7 +80,7 @@ function TransactionTable({ transactions, showDate }) {
             <th className="px-4 py-3">Reference No.</th>
             <th className="px-4 py-3">Type</th>
             <th className="px-4 py-3">Sender / Receiver</th>
-            <th className="px-4 py-3">Staff</th>
+            <th className="px-4 py-3">Recorded by</th>
             <th className="px-4 py-3 text-right">Amount</th>
             <th className="px-4 py-3 text-right">Fee</th>
             <th className="px-4 py-3">Status</th>
@@ -106,7 +106,7 @@ function TransactionTable({ transactions, showDate }) {
                   <TransactionTypeBadge type={transaction.type} />
                 </td>
                 <td className="px-4 py-3">{transaction.name || <NoName />}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-slate-600">{transaction.staffName}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-slate-600">{whoRecorded(transaction, userId)}</td>
                 <td
                   className={`whitespace-nowrap px-4 py-3 text-right font-bold tabular-nums ${
                     isVoided ? 'text-slate-500 line-through' : ''
@@ -115,11 +115,11 @@ function TransactionTable({ transactions, showDate }) {
                   {formatPeso(transaction.amount)}
                 </td>
                 <td
-                  className={`whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-600 ${
-                    isVoided ? 'line-through' : ''
+                  className={`whitespace-nowrap px-4 py-3 text-right font-bold tabular-nums ${
+                    isVoided ? 'text-slate-500 line-through' : 'text-emerald-700'
                   }`}
                 >
-                  {formatPeso(transaction.feeAmount)}
+                  {transaction.feeAmount > 0 ? `+${formatPeso(transaction.feeAmount)}` : '—'}
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={transaction.status} />
@@ -143,14 +143,17 @@ function TransactionTable({ transactions, showDate }) {
 
 // Phones: compact cards. Large screens (lg and up): a table.
 export default function TransactionList({ transactions, showDate = false }) {
+  const { profile } = useAuth()
+  const userId = profile?.id
+
   return (
     <>
       <ul className="divide-y divide-slate-100 lg:hidden">
         {transactions.map((transaction) => (
-          <TransactionCard key={transaction.id} transaction={transaction} showDate={showDate} />
+          <TransactionCard key={transaction.id} transaction={transaction} showDate={showDate} userId={userId} />
         ))}
       </ul>
-      <TransactionTable transactions={transactions} showDate={showDate} />
+      <TransactionTable transactions={transactions} showDate={showDate} userId={userId} />
     </>
   )
 }

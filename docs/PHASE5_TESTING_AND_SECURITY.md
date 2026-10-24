@@ -91,6 +91,9 @@ Passwords stay only in this PowerShell window and are cleared at the end. Every 
 - [ ] "Try an amount": 500 shows Fee ₱15 and Customer pays ₱515; 100 shows ₱10; 101 shows ₱15
 - [ ] Staff opens Cash In, types 500: the panel shows Amount ₱500, Fee ₱15, Customer pays ₱515. Same in Cash Out
 - [ ] After saving, the record shows the fee; the dashboard **Fees Collected** goes up by ₱15
+- [ ] The **Fees today** card at the top of the dashboard shows the fee total and the date
+- [ ] Each recent-transaction row shows: an icon tile (green arrow down = cash-in, blue arrow up = cash-out), the title "Cash-in"/"Cash-out", `name · You · time` underneath, and the amount with the fee in green below it (like `₱500` / `+₱15`). Your own entries say "You"; another person's show their name
+- [ ] On History, rows also show the date and (for cash-out) the reference number
 - [ ] Void that record: Fees Collected goes back down
 - [ ] Owner changes the table (500 -> fee 20): the OLD record still shows fee ₱15; a NEW ₱500 record shows ₱20
 - [ ] An amount above the highest tier shows the amber "no fee is set" note

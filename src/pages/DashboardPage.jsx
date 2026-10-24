@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import ErrorState from '../components/common/ErrorState'
+import Skeleton from '../components/common/Skeleton'
 import DashboardSkeleton from '../components/dashboard/DashboardSkeleton'
+import FeesHero from '../components/dashboard/FeesHero'
 import DateSelector from '../components/dashboard/DateSelector'
 import QuickActions from '../components/dashboard/QuickActions'
 import RecentTransactions from '../components/dashboard/RecentTransactions'
@@ -47,6 +49,12 @@ export default function DashboardPage() {
         <p className="text-sm text-slate-600">Staff accounts see today&apos;s totals.</p>
       )}
 
+      {!error && (loading || !data ? (
+        <Skeleton className="h-28" />
+      ) : (
+        <FeesHero feeTotal={data.totals.feeTotal} count={data.totals.validCount} date={businessDate} isToday={isToday} />
+      ))}
+
       <QuickActions />
 
       {error ? (
@@ -55,7 +63,7 @@ export default function DashboardPage() {
         <DashboardSkeleton />
       ) : (
         <>
-          <SummaryCards totals={data.totals} isToday={isToday} />
+          <SummaryCards totals={data.totals} isToday={isToday} hideFees />
           <RecentTransactions transactions={data.recentTransactions} />
         </>
       )}

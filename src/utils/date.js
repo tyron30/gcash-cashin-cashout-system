@@ -124,3 +124,13 @@ export function eachDate(from, to) {
 export function getMonthStart(dateString) {
   return `${dateString.slice(0, 8)}01`
 }
+
+// "2026-10-22" -> "Oct 22, 2026"
+export function formatMediumDate(dateString) {
+  return new Intl.DateTimeFormat('en-PH', {
+    timeZone: STORE_TIME_ZONE,
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(`${dateString}T12:00:00+08:00`))
+}

@@ -4,6 +4,7 @@ import {
   addDays,
   eachDate,
   formatBusinessDate,
+  formatMediumDate,
   formatShortDate,
   formatTime,
   getBusinessDateFromTimestamp,
@@ -63,6 +64,10 @@ describe('date helpers', () => {
     assert.match(formatBusinessDate('2026-10-13'), /October/)
     assert.match(formatBusinessDate('2026-10-13'), /13/)
     assert.match(formatShortDate('2026-10-13'), /Oct/)
+  })
+  it('formatMediumDate matches the reference style', () => {
+    assert.equal(formatMediumDate('2026-10-22'), 'Oct 22, 2026')
+    assert.equal(formatMediumDate('2026-01-01'), 'Jan 1, 2026')
   })
   it('getMonthStart', () => {
     assert.equal(getMonthStart('2026-10-13'), '2026-10-01')

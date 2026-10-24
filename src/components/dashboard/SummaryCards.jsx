@@ -13,7 +13,7 @@ import StatCard from './StatCard'
 const countLabel = (count) =>
   `${count} ${count === 1 ? 'transaction' : 'transactions'}`
 
-export default function SummaryCards({ totals, isToday }) {
+export default function SummaryCards({ totals, isToday, hideFees = false }) {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
@@ -33,7 +33,9 @@ export default function SummaryCards({ totals, isToday }) {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:grid-cols-4">
+      <div
+        className={`grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 ${hideFees ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}
+      >
         <StatCard
           label="Combined Volume"
           value={formatPeso(totals.volume)}
@@ -47,13 +49,15 @@ export default function SummaryCards({ totals, isToday }) {
           icon={ArrowLeftRight}
           tone="amber"
         />
-        <StatCard
-          label="Fees Collected"
-          value={formatPeso(totals.feeTotal)}
-          helper="Service charges (voided not counted)"
-          icon={Coins}
-          tone="green"
-        />
+        {!hideFees && (
+          <StatCard
+            label="Fees Collected"
+            value={formatPeso(totals.feeTotal)}
+            helper="Service charges (voided not counted)"
+            icon={Coins}
+            tone="green"
+          />
+        )}
         <StatCard
           label={isToday ? 'Transactions Today' : 'Transactions'}
           value={totals.validCount}
